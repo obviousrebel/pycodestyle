@@ -2228,6 +2228,7 @@ class StandardReport(BaseReport):
         self._repeat = options.repeat
         self._show_source = options.show_source
         self._show_pep8 = options.show_pep8
+        self._quiet = options.quiet
 
     def init_file(self, filename, lines, expected, line_offset):
         """Signal a new file."""
@@ -2247,29 +2248,30 @@ class StandardReport(BaseReport):
     def get_file_results(self):
         """Print results and return the overall count for this file."""
         self._deferred_print.sort()
-        for line_number, offset, code, text, doc in self._deferred_print:
-            print(self._fmt % {
-                'path': self.filename,
-                'row': self.line_offset + line_number, 'col': offset + 1,
-                'code': code, 'text': text,
-            })
-            if self._show_source:
-                if line_number > len(self.lines):
-                    line = ''
-                else:
-                    line = self.lines[line_number - 1]
-                print(line.rstrip())
-                print(re.sub(r'\S', ' ', line[:offset]) + '^')
-            if self._show_pep8 and doc:
-                print('    ' + doc.strip())
+        if not self._quiet:
+            for line_number, offset, code, text, doc in self._deferred_print:
+                print(self._fmt % {
+                    'path': self.filename,
+                    'row': self.line_offset + line_number, 'col': offset + 1,
+                    'code': code, 'text': text,
+                })
+                if self._show_source:
+                    if line_number > len(self.lines):
+                        line = ''
+                    else:
+                        line = self.lines[line_number - 1]
+                    print(line.rstrip())
+                    print(re.sub(r'\S', ' ', line[:offset]) + '^')
+                if self._show_pep8 and doc:
+                    print('    ' + doc.strip())
 
-            # stdout is block buffered when not stdout.isatty().
-            # line can be broken where buffer boundary since other
-            # processes write to same file.
-            # flush() after print() to avoid buffer boundary.
-            # Typical buffer size is 8192. line written safely when
-            # len(line) < 8192.
-            sys.stdout.flush()
+                # stdout is block buffered when not stdout.isatty().
+                # line can be broken where buffer boundary since other
+                # processes write to same file.
+                # flush() after print() to avoid buffer boundary.
+                # Typical buffer size is 8192. line written safely when
+                # len(line) < 8192.
+                sys.stdout.flush()
         return self.file_errors
 
 
@@ -2310,7 +2312,7 @@ class StyleGuide(object):
         self.options = options
 
         if not options.reporter:
-            options.reporter = BaseReport if options.quiet else StandardReport
+            options.reporter = StandardReport
 
         options.select = tuple(options.select or ())
         if not (options.select or options.ignore or
